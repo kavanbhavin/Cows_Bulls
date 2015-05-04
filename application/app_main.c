@@ -3,14 +3,39 @@
 #include "radios/family1/mrfi_spi.h"
 #include <string.h>
 #include "uart_utility.h"
+#include "cows_bulls_model.h"
 
 /* Useful #defines */
 #define RED_SEND_LED 		0x01
+#define ENABLE_READING_INTERRRUPT() IE2    |=  UCA0RXIE
+
 
 int buffer_ready=0;
 int current_index =0;
-mrfiPacket_t 	packet;
-int finished_turn;
+int received_packet=0;
+
+mrfiPacket_t 	guess_packet;
+mrfiPacket_t	guess_response_packet;
+mrfiPacket_t	incoming_packet;
+
+void play_game(){
+	while(1){
+		if(buffer_ready){
+			status =;
+			buffer_ready = 0;
+			if(status == MRFI_TX_RESULT_FAILED){
+				uart_puts("Failure to transmit");
+			}
+			ENABLE_READING_INTERRRUPT();
+			while(!received_packet) __no_operation();
+			send_response_packet();
+		}else __no_operation();
+	}
+}
+
+void send_response_packet(){
+	
+}
 
 void main(void){
 	int status;
@@ -21,28 +46,50 @@ void main(void){
 	MRFI_Init();
 	MRFI_WakeUp();
 	init_uart();
-	packet.frame[13]='\n';
 	/* Construct a packet to send over the radio.
-		 * 
-		 *  Packet frame structure:
-		 *  ---------------------------------------------------
-		 *  | Length (1B) | Dest (4B) | Source (4B) | Payload |
-		 *  ---------------------------------------------------
-		 */
+	* 
+	*  Packet frame structure:
+	*  ----------------------------------------------------------------------
+	*  | Length (1B) | Dest (4B) | Source (4B) | Packet Type (1B) | Payload |
+	*  ----------------------------------------------------------------------
+	*/
+	/* For our payload the first byte will be a character that represents
+	* if the packet is a guess-response packet or a guess packet
+	* R will represent a response packet while, G will represent a guess packet
+	* For a response packet, the second byte will be the number of correct digits
+	* and the third byte will be the number of digits that were in the guess,
+	* but not in the right position
+	* For the guess packet there will just be four bytes containing the guesses
+	*/
 
-		/* First byte of packet frame holds message length in bytes */
-	packet.frame[0] = 5 + 8;	/* Includes 8-byte address header */
+
+	/* First byte of packet frame holds message length in bytes */
+	guess_packet.frame[0] = 5 + 8;	/* Includes 8-byte address header TODO FIX THIS */
 		
-		/* Next 8 bytes are addresses, 4 each for source and dest. */
-	packet.frame[1] = 0x12;		/* Destination */
-	packet.frame[2] = 0x34;
-	packet.frame[3] = 0xab;
-	packet.frame[4] = 0xcd;
+	/* Next 8 bytes are addresses, 4 each for source and dest. */
+	guess_packet.frame[1] = 0x12;		/* Destination */
+	guess_packet.frame[2] = 0x34;
+	guess_packet.frame[3] = 0xab;
+	guess_packet.frame[4] = 0xcd;
 		
-	packet.frame[5] = 0x02;		/* Source */
-	packet.frame[6] = 0x00;
-	packet.frame[7] = 0x01;
-	packet.frame[8] = 0x02;
+	guess_packet.frame[5] = 0x02;		/* Source */
+	guess_packet.frame[6] = 0x00;
+	guess_packet.frame[7] = 0x01;
+	guess_packet.frame[8] = 0x02;
+	guess_packet.frame[9] = 'G';
+
+	guess_response_packet.frame[0] = 3+8;
+	guess_response_packet.frame[1] = 0x12;		/* Destination */
+	guess_response_packet.frame[2] = 0x34;
+	guess_response_packet.frame[3] = 0xab;
+	guess_response_packet.frame[4] = 0xcd;
+		
+	guess_response_packet.frame[5] = 0x02;		/* Source */
+	guess_response_packet.frame[6] = 0x00;
+	guess_response_packet.frame[7] = 0x01;
+	guess_response_packet.frame[8] = 0x02;
+	guess_response_packet.frame[9] = 'R';
+
 	/* Enable  USCI_A0 RX  interrupt   */
 	IE2    |=  UCA0RXIE;
 	__bis_SR_register(GIE);   //interrupts  enabled
@@ -53,6 +100,9 @@ void main(void){
 			if(status == MRFI_TX_RESULT_FAILED){
 				uart_puts("Failure to transmit");
 			}
+			ENABLE_READING_INTERRRUPT();
+			while(!received_packet) __no_operation();
+			play_game();
 		}else{
 			__no_operation();
 		}
@@ -61,17 +111,20 @@ void main(void){
 
 /* Function to execute upon receiving a packet
  *   Called by the driver when new packet arrives */
-void MRFI_RxCompleteISR(void) {}
+void MRFI_RxCompleteISR(void) {
+	MRFI_Receive(&incoming_packet);
+	received_packet = 1;
+}
 
 /*  Echo    back    RXed    character,  confirm TX  buffer  is  ready   first   */
 #pragma vector=USCIAB0RX_VECTOR
 __interrupt void    USCI0RX_ISR(void)
 {
-	packet.frame[9+current_index] = UCA0RXBUF;
+	packet.frame[10+current_index] = UCA0RXBUF;
 	if(current_index==3){
 		current_index=0;
 		buffer_ready = 1;
-		/* Disnable  USCI_A0 RX  interrupt   */
+		/* Disable  USCI_A0 RX  interrupt   */
 		IE2    &=  ~UCA0RXIE;
 	}else{
 		current_index++;

@@ -12,9 +12,9 @@ typedef struct result{
 result_t evaluate_guess(char guess[4]);
 
 /* Represents a player's code*/
-int code;
+char code[4];
 
-void set_code(int c){
+void set_code(char c[4]){
 	code = c;
 }
 #endif /*COWS_BULLS_MODEL_H_*/
