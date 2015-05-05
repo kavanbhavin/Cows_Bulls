@@ -20,14 +20,7 @@ mrfiPacket_t	guess_response_packet;
 mrfiPacket_t	incoming_packet;
 
 void send_response_packet(){
-	int i, status;
-	result_t result;
-	for(i=0; i<4; i++){
-		guess[i] = incoming_packet.frame[10+i];
-	}
-	result = evaluate_guess(guess);
-	guess_response_packet.frame[10] = '0'+result.correct_digits;
-	guess_response_packet.frame[11] = '0'+result.digits_in_wrong_places;
+	int status;
 	status = MRFI_Transmit(&guess_response_packet , MRFI_TX_TYPE_FORCED);
 	if(status == MRFI_TX_RESULT_FAILED){
 				uart_puts("Failure to transmit");
@@ -147,6 +140,16 @@ void process_opponent_response(){
 	uart_puts(" digits in code but not write place\n");
 }
 
+void process_response_packet(){
+	int i;
+	result_t result;
+	for(i=0; i<4; i++){
+		guess[i] = incoming_packet.frame[10+i];
+	}
+	result = evaluate_guess(guess);
+	guess_response_packet.frame[10] = '0'+result.correct_digits;
+	guess_response_packet.frame[11] = '0'+result.digits_in_wrong_places;
+}
 
 /* Function to execute upon receiving a packet
  *   Called by the driver when new packet arrives */
@@ -154,6 +157,7 @@ void MRFI_RxCompleteISR(void) {
 	MRFI_Receive(&incoming_packet);
 	/*Check what kind of packet it is*/
 	if(incoming_packet.frame[9] == 'G'){
+		process_response_packet();
 		received_packet = 1;
 		return;
 	}
