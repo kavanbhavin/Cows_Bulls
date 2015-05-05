@@ -17,7 +17,7 @@ result_t evaluate_guess(char guess[4]){
 		} 
 	}
 	for(opp_idx=0; opp_idx<4; opp_idx++){
-		for(own_idx=opp_idx+1; own_idx<4; own_idx++){
+		for(own_idx=0; own_idx<4; own_idx++){
 			if(guess[opp_idx] == our_code[own_idx]){
 				result.digits_in_wrong_places++;
 				guess[opp_idx] = -1;			
