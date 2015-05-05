@@ -15,3 +15,4 @@ app_main.obj: C:/Users/Kavan/Downloads/Cows_Bulls/radio_example/application/../d
 app_main.obj: C:/Program\ Files\ (x86)/Texas\ Instruments/ccsv4/tools/compiler/msp430/include/string.h
 app_main.obj: C:/Program\ Files\ (x86)/Texas\ Instruments/ccsv4/tools/compiler/msp430/include/linkage.h
 app_main.obj: ../uart_utility.h
+app_main.obj: ../cows_bulls_model.h

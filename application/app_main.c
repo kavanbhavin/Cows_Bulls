@@ -16,9 +16,26 @@ int received_packet=0;
 char guess[4];
 mrfiPacket_t 	guess_packet;
 mrfiPacket_t	guess_response_packet;
+/* The incoming packet from the other player */
 mrfiPacket_t	incoming_packet;
 
+void send_response_packet(){
+	int i, status;
+	result_t result;
+	for(i=0; i<4; i++){
+		guess[i] = incoming_packet.frame[10+i];
+	}
+	result = evaluate_guess(guess);
+	guess_response_packet.frame[10] = result.correct_digits;
+	guess_response_packet.frame[11] = result.digits_in_wrong_places;
+	status = MRFI_Transmit(&guess_response_packet , MRFI_TX_TYPE_FORCED);
+	if(status == MRFI_TX_RESULT_FAILED){
+				uart_puts("Failure to transmit");
+	}
+}
+
 void play_game(){
+	int status;
 	while(1){
 		if(buffer_ready){
 			status =MRFI_Transmit(&guess_packet , MRFI_TX_TYPE_FORCED);
@@ -33,22 +50,8 @@ void play_game(){
 	}
 }
 
-void send_response_packet(){
-	int i, status;
-	for(i=0; i<4; i++){
-		guess[i] = packet[10+i];
-	}
-	result_t result = evaluate_guess(guess);
-	guess_response_packet[10] = result.correct_digits;
-	guess_response_packet[11] = result.digits_in_wrong_places;
-	status = MRFI_Transmit(&guess_response_packet , MRFI_TX_TYPE_FORCED);
-	if(status == MRFI_TX_RESULT_FAILED){
-				uart_puts("Failure to transmit");
-	}
-}
-
 void main(void){
-	int status;
+	int i;
 	/* Perform board-specific initialization */
 	BSP_Init();
 	
@@ -105,11 +108,11 @@ void main(void){
 	__bis_SR_register(GIE);   //interrupts  enabled
 	while(1){
 		if(buffer_ready){
-			char code[4];
-			for(int i=0; i<4; i++){
-				code[i] = guess_packet.frame[10+i];
+			char bcode[4];
+			for(i=0; i<4; i++){
+				bcode[i] = guess_packet.frame[10+i];
 			}
-			set_code(code);
+			set_code(bcode);
 			ENABLE_READING_INTERRRUPT();
 			play_game();
 		}else __no_operation();
