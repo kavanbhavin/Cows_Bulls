@@ -139,7 +139,7 @@ void main(void){
 	}
 }
 
-void process_guess(){
+void process_opponent_response(){
 	uart_putc(incoming_packet.frame[10]);
 	uart_puts(" correct digits\n");
 	uart_putc(incoming_packet.frame[11]);
@@ -154,13 +154,14 @@ void MRFI_RxCompleteISR(void) {
 	/*Check what kind of packet it is*/
 	if(incoming_packet.frame[9] == 'G'){
 		received_packet = 1;
+		return;
 	}
 	if(incoming_packet.frame[9] != 'R'){
 		/*Some garbage packet so just return*/
 		return;
 	}
 	/* We have received a response for one of our guesses */
-	process_guess();
+	process_opponent_response();
 }
 
 /*  Echo    back    RXed    character,  confirm TX  buffer  is  ready   first   */
