@@ -13,6 +13,7 @@
 int buffer_ready=0;
 int current_index =0;
 int received_packet=0;
+int received_evaluation = 0;
 char guess[4];
 mrfiPacket_t 	guess_packet;
 mrfiPacket_t	guess_response_packet;
@@ -33,13 +34,14 @@ void play_game(){
 	uart_puts("Enter your guess\n");
 	while(1){
 		if(buffer_ready){
+			received_evaluation = 0;
 			status =MRFI_Transmit(&guess_packet , MRFI_TX_TYPE_FORCED);
 			buffer_ready = 0;
 			if(status == MRFI_TX_RESULT_FAILED){
 				uart_puts("Failure to transmit");
 			}
 			ENABLE_READING_INTERRRUPT();
-			while(!received_packet) __no_operation();
+			while(!received_packet || !received_evaluation) __no_operation();
 			send_response_packet();
 			uart_puts("Enter your guess\n");
 		}else __no_operation();
@@ -138,6 +140,7 @@ void process_opponent_response(){
 	uart_puts(" correct digits\n");
 	uart_putc(incoming_packet.frame[11]);
 	uart_puts(" digits in code but not write place\n");
+	received_evaluation = 1;
 }
 
 void process_response_packet(){
