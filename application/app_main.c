@@ -41,8 +41,9 @@ void play_game(){
 				uart_puts("Failure to transmit");
 			}
 			ENABLE_READING_INTERRRUPT();
-			while(!received_packet || !received_evaluation) __no_operation();
+			while(!received_packet) __no_operation();
 			send_response_packet();
+			while(!received_evaluation) __no_operation();
 			uart_puts("Enter your guess\n");
 		}else __no_operation();
 	}
