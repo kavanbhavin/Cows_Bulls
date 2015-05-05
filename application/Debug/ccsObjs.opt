@@ -1,1 +1,0 @@
-"./bsp/bsp.obj" "./mrfi/mrfi.obj" "./uart_utility.obj" "./cows_bulls_model.obj" "./app_main.obj" -l"rts430.lib" "../lnk_msp430f2274.cmd" 

@@ -34,6 +34,7 @@ void send_response_packet(){
 	received_packet = 0;
 }
 
+
 void play_game(){
 	int status;
 	uart_puts("Enter your guess\n");
@@ -67,6 +68,11 @@ void play_game(){
 			}
 		}else __no_operation();
 	}
+}
+
+reset_state(){
+	opponent_won = 0;
+	we_won = 0;
 }
 
 void main(void){
@@ -186,6 +192,8 @@ void main(void){
 			ENABLE_READING_INTERRRUPT();
 			play_game();
 			uart_puts("Game over\n");
+			reset_state();
+			uart_puts("Enter your code\n");
 		}else __no_operation();
 	}
 }
