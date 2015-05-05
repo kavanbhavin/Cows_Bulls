@@ -138,6 +138,9 @@ void main(void){
 		if(status == MRFI_TX_RESULT_FAILED){
 			uart_puts("Failure to transmit");
 		}
+		for(i=0; i<=500; i++){
+			__no_operation();
+		}
 	}
 	uart_puts("Connected\n");
 	uart_puts("Enter your code\n");
