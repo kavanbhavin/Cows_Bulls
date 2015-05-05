@@ -26,8 +26,8 @@ void send_response_packet(){
 		guess[i] = incoming_packet.frame[10+i];
 	}
 	result = evaluate_guess(guess);
-	guess_response_packet.frame[10] = result.correct_digits;
-	guess_response_packet.frame[11] = result.digits_in_wrong_places;
+	guess_response_packet.frame[10] = '0'+result.correct_digits;
+	guess_response_packet.frame[11] = '0'+result.digits_in_wrong_places;
 	status = MRFI_Transmit(&guess_response_packet , MRFI_TX_TYPE_FORCED);
 	if(status == MRFI_TX_RESULT_FAILED){
 				uart_puts("Failure to transmit");
@@ -54,13 +54,15 @@ void play_game(){
 
 void main(void){
 	int i, status;
+	uint8_t address[]= {192,168,87,14};
+	WDTCTL =   WDTPW   +   WDTHOLD;
+	init_uart();
 	/* Perform board-specific initialization */
 	BSP_Init();
 	
 	/* Initialize minimal RF interface, wake up radio */
 	MRFI_Init();
 	MRFI_WakeUp();
-	init_uart();
 	/* Construct a packet to send over the radio.
 	* 
 	*  Packet frame structure:
@@ -83,7 +85,6 @@ void main(void){
 	/* Set a filter address for packets received by the radio
 	 *   This should match the "destination" address of
 	 *   the packets sent by the transmitter. */
-	uint8_t address[] = {0x12,0x34,0xab,0xcd};
 	/* Attempt to turn on address filtering
 	 *   If unsuccessful, turn on both LEDs and wait forever */
 	status = MRFI_SetRxAddrFilter(address);	
@@ -94,29 +95,32 @@ void main(void){
 	/* Turn on the radio receiver */
 	MRFI_RxOn();
 	/* Next 8 bytes are addresses, 4 each for source and dest. */
-	guess_packet.frame[1] = 0x12;		/* Destination */
-	guess_packet.frame[2] = 0x34;
-	guess_packet.frame[3] = 0xab;
-	guess_packet.frame[4] = 0xcd;
+	guess_packet.frame[1] = 192;		/* Destination */
+	guess_packet.frame[2] = 168;
+	guess_packet.frame[3] = 87;
+	guess_packet.frame[4] = 31;
 		
-	guess_packet.frame[5] = 0x02;		/* Source */
-	guess_packet.frame[6] = 0x00;
-	guess_packet.frame[7] = 0x01;
-	guess_packet.frame[8] = 0x02;
+	guess_packet.frame[5] = 192;		/* Source */
+	guess_packet.frame[6] = 168;
+	guess_packet.frame[7] = 87;
+	guess_packet.frame[8] = 14;
 	guess_packet.frame[9] = 'G';
+	guess_packet.frame[10] = 0;
+	guess_packet.frame[11] = 0;
+	guess_packet.frame[12] = 0;
+	guess_packet.frame[13] = 0;
 
 	guess_response_packet.frame[0] = 3+8;
-	guess_response_packet.frame[1] = 0x12;		/* Destination */
-	guess_response_packet.frame[2] = 0x34;
-	guess_response_packet.frame[3] = 0xab;
-	guess_response_packet.frame[4] = 0xcd;
+	guess_response_packet.frame[1] = 192;		/* Destination */
+	guess_response_packet.frame[2] = 168;
+	guess_response_packet.frame[3] = 87;
+	guess_response_packet.frame[4] = 31;
 		
-	guess_response_packet.frame[5] = 0x02;		/* Source */
-	guess_response_packet.frame[6] = 0x00;
-	guess_response_packet.frame[7] = 0x01;
-	guess_response_packet.frame[8] = 0x02;
+	guess_response_packet.frame[5] = 192;		/* Source */
+	guess_response_packet.frame[6] = 168;
+	guess_response_packet.frame[7] = 87;
+	guess_response_packet.frame[8] = 14;
 	guess_response_packet.frame[9] = 'R';
-
 	/* Enable  USCI_A0 RX  interrupt   */
 	IE2    |=  UCA0RXIE;
 	__bis_SR_register(GIE);   //interrupts  enabled
