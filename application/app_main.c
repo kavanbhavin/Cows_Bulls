@@ -13,7 +13,7 @@
 int buffer_ready=0;
 int current_index =0;
 int received_packet=0;
-
+char guess[4];
 mrfiPacket_t 	guess_packet;
 mrfiPacket_t	guess_response_packet;
 mrfiPacket_t	incoming_packet;
@@ -21,7 +21,7 @@ mrfiPacket_t	incoming_packet;
 void play_game(){
 	while(1){
 		if(buffer_ready){
-			status =;
+			status =MRFI_Transmit(&guess_packet , MRFI_TX_TYPE_FORCED);
 			buffer_ready = 0;
 			if(status == MRFI_TX_RESULT_FAILED){
 				uart_puts("Failure to transmit");
@@ -34,7 +34,17 @@ void play_game(){
 }
 
 void send_response_packet(){
-	
+	int i, status;
+	for(i=0; i<4; i++){
+		guess[i] = packet[10+i];
+	}
+	result_t result = evaluate_guess(guess);
+	guess_response_packet[10] = result.correct_digits;
+	guess_response_packet[11] = result.digits_in_wrong_places;
+	status = MRFI_Transmit(&guess_response_packet , MRFI_TX_TYPE_FORCED);
+	if(status == MRFI_TX_RESULT_FAILED){
+				uart_puts("Failure to transmit");
+	}
 }
 
 void main(void){
@@ -95,32 +105,46 @@ void main(void){
 	__bis_SR_register(GIE);   //interrupts  enabled
 	while(1){
 		if(buffer_ready){
-			status = MRFI_Transmit(&packet , MRFI_TX_TYPE_FORCED);
-			buffer_ready = 0;
-			if(status == MRFI_TX_RESULT_FAILED){
-				uart_puts("Failure to transmit");
+			char code[4];
+			for(int i=0; i<4; i++){
+				code[i] = guess_packet.frame[10+i];
 			}
+			set_code(code);
 			ENABLE_READING_INTERRRUPT();
-			while(!received_packet) __no_operation();
 			play_game();
-		}else{
-			__no_operation();
-		}
+		}else __no_operation();
 	}
 }
+
+void process_guess(){
+	uart_putc(incoming_packet.frame[10]);
+	uart_puts(" correct digits\n");
+	uart_putc(incoming_packet.frame[11]);
+	uart_puts(" digits in code but not write place\n");
+}
+
 
 /* Function to execute upon receiving a packet
  *   Called by the driver when new packet arrives */
 void MRFI_RxCompleteISR(void) {
 	MRFI_Receive(&incoming_packet);
-	received_packet = 1;
+	/*Check what kind of packet it is*/
+	if(incoming_packet.frame[9] == 'G'){
+		received_packet = 1;
+	}
+	if(incoming_packet.frame[9] != 'R'){
+		/*Some garbage packet so just return*/
+		return;
+	}
+	/* We have received a response for one of our guesses */
+	process_guess();
 }
 
 /*  Echo    back    RXed    character,  confirm TX  buffer  is  ready   first   */
 #pragma vector=USCIAB0RX_VECTOR
 __interrupt void    USCI0RX_ISR(void)
 {
-	packet.frame[10+current_index] = UCA0RXBUF;
+	guess_packet.frame[10+current_index] = UCA0RXBUF;
 	if(current_index==3){
 		current_index=0;
 		buffer_ready = 1;

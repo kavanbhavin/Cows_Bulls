@@ -8,7 +8,7 @@ typedef struct result{
 	int win;
 } result_t;
 
-/* Returns the number a result based on a guess */
+/* Returns the a result based on a guess */
 result_t evaluate_guess(char guess[4]);
 
 /* Represents a player's code*/
@@ -17,4 +17,5 @@ char code[4];
 void set_code(char c[4]){
 	code = c;
 }
+
 #endif /*COWS_BULLS_MODEL_H_*/
