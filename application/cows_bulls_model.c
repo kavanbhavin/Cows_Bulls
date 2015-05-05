@@ -3,25 +3,29 @@
 char our_code[4];
 
 result_t evaluate_guess(char guess[4]){
-	int opp_idx, own_idx;
+	int opp_idx, own_idx, idx;
+	char temp_code[4];
 	result_t result;
 	result.correct_digits = 0;
 	result.digits_in_wrong_places = 0;
 	result.win = 0;
+	for(idx=0; idx<4; idx++){
+		temp_code[idx] = our_code[idx];
+	}
 
 	for(opp_idx=0; opp_idx<4; opp_idx++){
-		if(guess[opp_idx] == our_code[opp_idx]){
+		if(guess[opp_idx] == temp_code[opp_idx]){
 			result.correct_digits++;
-			guess[opp_idx] = -1;
-			our_code[opp_idx] = -2;
+			guess[opp_idx] = 1;
+			temp_code[opp_idx] = 2;
 		} 
 	}
 	for(opp_idx=0; opp_idx<4; opp_idx++){
 		for(own_idx=0; own_idx<4; own_idx++){
-			if(guess[opp_idx] == our_code[own_idx]){
+			if(guess[opp_idx] == temp_code[own_idx]){
 				result.digits_in_wrong_places++;
-				guess[opp_idx] = -1;			
-				our_code[own_idx] = -2;
+				guess[opp_idx] = 1;			
+				temp_code[own_idx] = 2;
 			}
 		}
 	}
