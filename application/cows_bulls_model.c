@@ -1,5 +1,7 @@
 #include "cows_bulls_model.h"
 
+char our_code[4];
+
 result_t evaluate_guess(char guess[4]){
 	int ours, theirs;
 	result_t result;
@@ -16,4 +18,11 @@ result_t evaluate_guess(char guess[4]){
 	}
 	if(result.correct_digits == 4) result.win = 1;
 	return result;
+}
+
+void set_code(char c[4]){
+	int i;
+	for(i=0; i<4; i++){
+		our_code[i] = c[i];
+	}
 }

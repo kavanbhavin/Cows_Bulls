@@ -36,6 +36,7 @@ void send_response_packet(){
 
 void play_game(){
 	int status;
+	uart_puts("Enter your guess\n");
 	while(1){
 		if(buffer_ready){
 			status =MRFI_Transmit(&guess_packet , MRFI_TX_TYPE_FORCED);
@@ -46,6 +47,7 @@ void play_game(){
 			ENABLE_READING_INTERRRUPT();
 			while(!received_packet) __no_operation();
 			send_response_packet();
+			uart_puts("Enter your guess\n");
 		}else __no_operation();
 	}
 }
@@ -106,13 +108,15 @@ void main(void){
 	/* Enable  USCI_A0 RX  interrupt   */
 	IE2    |=  UCA0RXIE;
 	__bis_SR_register(GIE);   //interrupts  enabled
+	uart_puts("Enter your code\n");
 	while(1){
 		if(buffer_ready){
-			char bcode[4];
+			char code[4];
 			for(i=0; i<4; i++){
-				bcode[i] = guess_packet.frame[10+i];
+				code[i] = guess_packet.frame[10+i];
 			}
-			set_code(bcode);
+			set_code(code);
+			buffer_ready=0;
 			ENABLE_READING_INTERRRUPT();
 			play_game();
 		}else __no_operation();
