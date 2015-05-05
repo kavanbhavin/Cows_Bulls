@@ -117,7 +117,7 @@ void main(void){
 	guess_response_packet.frame[8] = 14;
 	guess_response_packet.frame[9] = 'R';
 	
-	ping.frame[0] = 9;
+	ping.frame[0] = 13;
 	ping.frame[1] = 192;		/* Destination */
 	ping.frame[2] = 168;
 	ping.frame[3] = 87;
@@ -128,6 +128,9 @@ void main(void){
 	ping.frame[7] = 87;
 	ping.frame[8] = 14;
 	ping.frame[9] = 'P';
+	for(i=10; i<=13; i++){
+		ping.frame[i] = 'K';
+	}
 
 	/* Enable  USCI_A0 RX  interrupt   */
 	IE2    |=  UCA0RXIE;
@@ -138,8 +141,11 @@ void main(void){
 		if(status == MRFI_TX_RESULT_FAILED){
 			uart_puts("Failure to transmit");
 		}
-		for(i=0; i<=500; i++){
-			__no_operation();
+	}
+	for(i=0; i<=10; i++){
+		status = MRFI_Transmit(&ping, MRFI_TX_TYPE_FORCED);
+		if(status == MRFI_TX_RESULT_FAILED){
+			uart_puts("Failure to transmit");
 		}
 	}
 	uart_puts("Connected\n");
@@ -183,7 +189,7 @@ void MRFI_RxCompleteISR(void) {
 	MRFI_Receive(&incoming_packet);
 	/*Check what kind of packet it is*/
 	if(incoming_packet.frame[9] == 'P'){
-		other_msp_is_awake = 1;
+		other_msp_is_awake ++;
 		return;
 	}
 	if(incoming_packet.frame[9] == 'G'){
