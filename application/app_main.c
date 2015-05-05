@@ -53,7 +53,7 @@ void play_game(){
 }
 
 void main(void){
-	int i;
+	int i, status;
 	/* Perform board-specific initialization */
 	BSP_Init();
 	
@@ -80,7 +80,19 @@ void main(void){
 
 	/* First byte of packet frame holds message length in bytes */
 	guess_packet.frame[0] = 5 + 8;	/* Includes 8-byte address header TODO FIX THIS */
-		
+	/* Set a filter address for packets received by the radio
+	 *   This should match the "destination" address of
+	 *   the packets sent by the transmitter. */
+	uint8_t address[] = {0x12,0x34,0xab,0xcd};
+	/* Attempt to turn on address filtering
+	 *   If unsuccessful, turn on both LEDs and wait forever */
+	status = MRFI_SetRxAddrFilter(address);	
+	if(status != 0){
+		uart_puts("Error turning on filter\n");
+	}
+	MRFI_EnableRxAddrFilter();
+	/* Turn on the radio receiver */
+	MRFI_RxOn();
 	/* Next 8 bytes are addresses, 4 each for source and dest. */
 	guess_packet.frame[1] = 0x12;		/* Destination */
 	guess_packet.frame[2] = 0x34;
