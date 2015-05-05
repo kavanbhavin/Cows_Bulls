@@ -14,6 +14,7 @@ int buffer_ready=0;
 int current_index =0;
 int received_packet=0;
 int received_evaluation = 0;
+int other_msp_is_awake =0;
 char guess[4];
 mrfiPacket_t 	guess_packet;
 mrfiPacket_t	guess_response_packet;
@@ -52,6 +53,7 @@ void play_game(){
 void main(void){
 	int i, status;
 	uint8_t address[]= {192,168,87,14};
+	mrfiPacket_t ping;
 	WDTCTL =   WDTPW   +   WDTHOLD;
 	init_uart();
 	/* Perform board-specific initialization */
@@ -68,7 +70,7 @@ void main(void){
 	*  ----------------------------------------------------------------------
 	*/
 	/* For our payload the first byte will be a character that represents
-	* if the packet is a guess-response packet or a guess packet
+	* if the packet is a guess-response packet or a guess packet, or a ping packet
 	* R will represent a response packet while, G will represent a guess packet
 	* For a response packet, the second byte will be the number of correct digits
 	* and the third byte will be the number of digits that were in the guess,
@@ -78,7 +80,6 @@ void main(void){
 
 
 	/* First byte of packet frame holds message length in bytes */
-	guess_packet.frame[0] = 5 + 8;	/* Includes 8-byte address header TODO FIX THIS */
 	/* Set a filter address for packets received by the radio
 	 *   This should match the "destination" address of
 	 *   the packets sent by the transmitter. */
@@ -92,6 +93,7 @@ void main(void){
 	/* Turn on the radio receiver */
 	MRFI_RxOn();
 	/* Next 8 bytes are addresses, 4 each for source and dest. */
+	guess_packet.frame[0] = 5 + 8;
 	guess_packet.frame[1] = 192;		/* Destination */
 	guess_packet.frame[2] = 168;
 	guess_packet.frame[3] = 87;
@@ -102,10 +104,6 @@ void main(void){
 	guess_packet.frame[7] = 87;
 	guess_packet.frame[8] = 14;
 	guess_packet.frame[9] = 'G';
-	guess_packet.frame[10] = 0;
-	guess_packet.frame[11] = 0;
-	guess_packet.frame[12] = 0;
-	guess_packet.frame[13] = 0;
 
 	guess_response_packet.frame[0] = 3+8;
 	guess_response_packet.frame[1] = 192;		/* Destination */
@@ -118,9 +116,29 @@ void main(void){
 	guess_response_packet.frame[7] = 87;
 	guess_response_packet.frame[8] = 14;
 	guess_response_packet.frame[9] = 'R';
+	
+	ping.frame[0] = 9;
+	ping.frame[1] = 192;		/* Destination */
+	ping.frame[2] = 168;
+	ping.frame[3] = 87;
+	ping.frame[4] = 31;
+		
+	ping.frame[5] = 192;		/* Source */
+	ping.frame[6] = 168;
+	ping.frame[7] = 87;
+	ping.frame[8] = 14;
+	ping.frame[9] = 'P';
+
 	/* Enable  USCI_A0 RX  interrupt   */
 	IE2    |=  UCA0RXIE;
 	__bis_SR_register(GIE);   //interrupts  enabled
+	uart_puts("Connecting...\n");
+	status = MRFI_Transmit(&ping, MRFI_TX_TYPE_FORCED);
+	if(status == MRFI_TX_RESULT_FAILED){
+		uart_puts("Failure to transmit");
+	}
+	while(!other_msp_is_awake) __no_operation();
+	uart_puts("Connected\n");
 	uart_puts("Enter your code\n");
 	while(1){
 		if(buffer_ready){
@@ -160,6 +178,10 @@ void process_response_packet(){
 void MRFI_RxCompleteISR(void) {
 	MRFI_Receive(&incoming_packet);
 	/*Check what kind of packet it is*/
+	if(incoming_packet.frame[9] == 'P'){
+		other_msp_is_awake = 1;
+		return;
+	}
 	if(incoming_packet.frame[9] == 'G'){
 		process_response_packet();
 		received_packet = 1;
