@@ -133,11 +133,12 @@ void main(void){
 	IE2    |=  UCA0RXIE;
 	__bis_SR_register(GIE);   //interrupts  enabled
 	uart_puts("Connecting...\n");
-	status = MRFI_Transmit(&ping, MRFI_TX_TYPE_FORCED);
-	if(status == MRFI_TX_RESULT_FAILED){
-		uart_puts("Failure to transmit");
+	while(!other_msp_is_awake){
+		status = MRFI_Transmit(&ping, MRFI_TX_TYPE_FORCED);
+		if(status == MRFI_TX_RESULT_FAILED){
+			uart_puts("Failure to transmit");
+		}
 	}
-	while(!other_msp_is_awake) __no_operation();
 	uart_puts("Connected\n");
 	uart_puts("Enter your code\n");
 	while(1){
