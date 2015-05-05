@@ -32,6 +32,7 @@ void send_response_packet(){
 	if(status == MRFI_TX_RESULT_FAILED){
 				uart_puts("Failure to transmit");
 	}
+	received_packet = 0;
 }
 
 void play_game(){
