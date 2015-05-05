@@ -16,6 +16,10 @@ int received_packet=0;
 int received_evaluation = 0;
 int other_msp_is_awake =0;
 char guess[4];
+
+int opponent_won=0;
+int we_won=0;
+
 mrfiPacket_t 	guess_packet;
 mrfiPacket_t	guess_response_packet;
 /* The incoming packet from the other player */
@@ -45,7 +49,22 @@ void play_game(){
 			while(!received_packet) __no_operation();
 			send_response_packet();
 			while(!received_evaluation) __no_operation();
-			uart_puts("Enter your guess\n");
+			if(!opponent_won && !we_won){
+				uart_puts("Enter your guess\n");
+				continue;
+			}
+			if(opponent_won && we_won){
+				uart_puts("Draw\n");
+				return;
+			}
+			if(opponent_won){
+				uart_puts("You lost\n");
+				return;
+			}
+			if(we_won){
+				uart_puts("You won\n");
+				return;
+			}
 		}else __no_operation();
 	}
 }
@@ -141,11 +160,17 @@ void main(void){
 		if(status == MRFI_TX_RESULT_FAILED){
 			uart_puts("Failure to transmit");
 		}
+		for(i=0; i<=5000; i++){
+			__no_operation();
+		}
 	}
-	for(i=0; i<=10; i++){
+	for(i=0; i<=1000; i++){
 		status = MRFI_Transmit(&ping, MRFI_TX_TYPE_FORCED);
 		if(status == MRFI_TX_RESULT_FAILED){
 			uart_puts("Failure to transmit");
+		}
+		for(i=0; i<=5000; i++){
+			__no_operation();
 		}
 	}
 	uart_puts("Connected\n");
@@ -160,6 +185,7 @@ void main(void){
 			buffer_ready=0;
 			ENABLE_READING_INTERRRUPT();
 			play_game();
+			uart_puts("Game over\n");
 		}else __no_operation();
 	}
 }
@@ -170,6 +196,9 @@ void process_opponent_response(){
 	uart_putc(incoming_packet.frame[11]);
 	uart_puts(" digits in code but not write place\n");
 	received_evaluation = 1;
+	if(incoming_packet.frame[10]=='4'){
+		we_won = 1;
+	}
 }
 
 void process_response_packet(){
@@ -181,6 +210,9 @@ void process_response_packet(){
 	result = evaluate_guess(guess);
 	guess_response_packet.frame[10] = '0'+result.correct_digits;
 	guess_response_packet.frame[11] = '0'+result.digits_in_wrong_places;
+	if(result.correct_digits == 4){
+		opponent_won =1;
+	}
 }
 
 /* Function to execute upon receiving a packet
