@@ -3,16 +3,25 @@
 char our_code[4];
 
 result_t evaluate_guess(char guess[4]){
-	int ours, theirs;
+	int opp_idx, own_idx;
 	result_t result;
 	result.correct_digits = 0;
 	result.digits_in_wrong_places = 0;
-	result.win =0;
-	for(theirs=0; theirs<4; theirs++){
-		for(ours=0; ours<4; ours++){
-			if(guess[theirs] == our_code[ours]){
-				if(ours==theirs) result.correct_digits++;
-				else result.digits_in_wrong_places++;
+	result.win = 0;
+
+	for(opp_idx=0; opp_idx<4; opp_idx++){
+		if(guess[opp_idx] == our_code[opp_idx]){
+			result.correct_digits++;
+			guess[opp_idx] = -1;
+			our_code[opp_idx] = -2;
+		} 
+	}
+	for(opp_idx=0; opp_idx<4; opp_idx++){
+		for(own_idx=0; own_idx<4; own_idx++){
+			if(guess[opp_idx] == our_code[own_idx]){
+				result.digits_in_wrong_places++;
+				guess[opp_idx] = -1;			
+				our_code[own_idx] = -2;
 			}
 		}
 	}
