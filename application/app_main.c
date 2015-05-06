@@ -5,22 +5,24 @@
 #include "uart_utility.h"
 #include "cows_bulls_model.h"
 
-/* Useful #defines */
-#define RED_SEND_LED 		0x01
-#define ENABLE_READING_INTERRRUPT() IE2    |=  UCA0RXIE
-
-
+/* Polling variable for user input*/
 int buffer_ready=0;
 int current_index =0;
+/* Synchronization with other MSP*/
 int received_packet=0;
 int received_evaluation = 0;
 int other_msp_is_awake =0;
 char guess[4];
+/* Should the input uart handler count this as valid input ?*/
+int ready_to_read = 0;
 
+/* Game status variables */
 int opponent_won=0;
 int we_won=0;
 
+/* When our player makes a guess, this packet is used */
 mrfiPacket_t 	guess_packet;
+/* Used to generate a response to the other player's guess */
 mrfiPacket_t	guess_response_packet;
 /* The incoming packet from the other player */
 mrfiPacket_t	incoming_packet;
@@ -34,10 +36,12 @@ void send_response_packet(){
 	received_packet = 0;
 }
 
-
+/* Plays one iteration of the game */
 void play_game(){
 	int status;
 	uart_puts("Enter your guess\n");
+	ready_to_read = 1;
+	/* Poll buffer */
 	while(1){
 		if(buffer_ready){
 			received_evaluation = 0;
@@ -46,12 +50,12 @@ void play_game(){
 			if(status == MRFI_TX_RESULT_FAILED){
 				uart_puts("Failure to transmit");
 			}
-			ENABLE_READING_INTERRRUPT();
 			while(!received_packet) __no_operation();
 			send_response_packet();
 			while(!received_evaluation) __no_operation();
 			if(!opponent_won && !we_won){
 				uart_puts("Enter your guess\n");
+				ready_to_read = 1;
 				continue;
 			}
 			if(opponent_won && we_won){
@@ -69,14 +73,15 @@ void play_game(){
 		}else __no_operation();
 	}
 }
-
+/* Reset game state info */
 void reset_state(){
 	int i;
 	opponent_won = 0;
 	we_won = 0;
 	current_index = 0;
+	ready_to_read = 0;
 	for(i=0; i<4; i++){
-		buffer[i] = 0;
+		guess_packet.frame[10+i] = 0;
 	}
 	for(i=0; i<5000; i++){
 		__no_operation();
@@ -112,12 +117,8 @@ void main(void){
 	*/
 
 
-	/* First byte of packet frame holds message length in bytes */
-	/* Set a filter address for packets received by the radio
-	 *   This should match the "destination" address of
-	 *   the packets sent by the transmitter. */
 	/* Attempt to turn on address filtering
-	 *   If unsuccessful, turn on both LEDs and wait forever */
+	 * If unsuccessful, print error */
 	status = MRFI_SetRxAddrFilter(address);	
 	if(status != 0){
 		uart_puts("Error turning on filter\n");
@@ -125,7 +126,7 @@ void main(void){
 	MRFI_EnableRxAddrFilter();
 	/* Turn on the radio receiver */
 	MRFI_RxOn();
-	/* Next 8 bytes are addresses, 4 each for source and dest. */
+	/* Initialize all packets */
 	guess_packet.frame[0] = 5 + 8;
 	guess_packet.frame[1] = 192;		/* Destination */
 	guess_packet.frame[2] = 168;
@@ -189,6 +190,7 @@ void main(void){
 	}
 	uart_puts("Connected\n");
 	uart_puts("Enter your code\n");
+	ready_to_read = 1;
 	while(1){
 		if(buffer_ready){
 			char code[4];
@@ -197,11 +199,11 @@ void main(void){
 			}
 			set_code(code);
 			buffer_ready=0;
-			ENABLE_READING_INTERRRUPT();
 			play_game();
 			uart_puts("Game over\n");
 			reset_state();
 			uart_puts("Enter your code\n");
+			ready_to_read = 1;
 		}else __no_operation();
 	}
 }
@@ -217,6 +219,7 @@ void process_opponent_response(){
 	}
 }
 
+/* Send packet to evaluate other MSP's Guess */
 void process_response_packet(){
 	int i;
 	result_t result;
@@ -257,12 +260,16 @@ void MRFI_RxCompleteISR(void) {
 #pragma vector=USCIAB0RX_VECTOR
 __interrupt void    USCI0RX_ISR(void)
 {
+	if(!ready_to_read || UCA0RXBUF < '0' || UCA0RXBUF > '9'){
+		return
+	} 
 	guess_packet.frame[10+current_index] = UCA0RXBUF;
+	uart_putc(UCA0RXBUF);
 	if(current_index==3){
 		current_index=0;
 		buffer_ready = 1;
-		/* Disable  USCI_A0 RX  interrupt   */
-		IE2    &=  ~UCA0RXIE;
+		ready_to_read = 0;
+		uart_putc("\n");
 	}else{
 		current_index++;
 	}
