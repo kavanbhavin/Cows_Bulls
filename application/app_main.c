@@ -70,9 +70,17 @@ void play_game(){
 	}
 }
 
-reset_state(){
+void reset_state(){
+	int i;
 	opponent_won = 0;
 	we_won = 0;
+	current_index = 0;
+	for(i=0; i<4; i++){
+		buffer[i] = 0;
+	}
+	for(i=0; i<5000; i++){
+		__no_operation();
+	}
 }
 
 void main(void){
